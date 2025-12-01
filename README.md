@@ -29,12 +29,8 @@ thirdparty      external libs (Just xxhash crypto stuff is hard)
 This year I am trying to learn and understand simd (I will also try some multi-threading when I see it could be utilized) 
 wanted to compare solutions and understand the actual difference and if `-release` mode would actually do some of the optimizations already?
 
-```
-IMPORTANT NOTE: The timings is kinda ghetto and don't really take this as an scientific fact just a guy trying to learn/share 
-```
-> [! NOTE]
-> The timings is kinda ghetto and don't really take this as an scientific fact just a 
-> someone trying to learn/share. Things could definetly be wrong!
+> [!IMPORTANT]
+The timings is kinda ghetto and don't really take this as an scientific fact just a someone trying to learn/share. Things could definetly be wrong!
 
 #### Day 1 Results
 ```bash
