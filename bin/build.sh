@@ -83,7 +83,7 @@ if [[ "$OS" == "mac" ]]; then
     LIBS="-lpthread -framework Foundation -framework AppKit -framework Cocoa"
 elif [[ "$OS" == "linux" ]]; then
     OS_FLAGS="-D_GNU_SOURCE"
-    LIBS="-lpthread -lm"
+    LIBS="-lpthread -lm -lX11"
 fi
 
 # Ensure build directory exists
