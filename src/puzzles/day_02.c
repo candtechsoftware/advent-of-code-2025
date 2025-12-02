@@ -4,7 +4,7 @@
 #include "base/base_inc.c"
 #include "os/os_inc.c"
 
-u64
+static inline u64
 parse_number(u8 **ptr, u8 *end) {
     u64 n = 0;
     while (*ptr < end && char_is_digit(**ptr)) {
@@ -134,6 +134,7 @@ solve_part1(Arena *arena, String input, b32 use_simd) {
     u64 end_time = os_now_microseconds();
     u64 elapsed_us = end_time - start_time;
 
+    // @TOOD(Alex): Work on your fmt library this is trash
     char buf[32];
     u32 len = fmt_u64_to_str(total_sum, buf, 10);
     buf[len] = 0;
