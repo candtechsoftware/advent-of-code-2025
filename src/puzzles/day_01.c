@@ -80,12 +80,12 @@ solve_part1(Arena *arena, String input, b32 use_simd) {
         directions[idx] = (dir == 'L') ? -1 : 0;
 
         s32 num = 0;
-        while (ptr < end && *ptr >= '0' && *ptr <= '9') {
+        while (ptr < end && char_is_digit(*ptr)) {
             num = num * 10 + (*ptr++ - '0');
         }
         distances[idx] = num;
 
-        while (ptr < end && (*ptr == '\n' || *ptr == '\r')) ptr++;
+        while (ptr < end && char_is_whitespace(*ptr)) ptr++;
         idx++;
     }
 
@@ -215,12 +215,12 @@ solve_part2(Arena *arena, String input, Run_Flag flag) {
         directions[idx] = (dir == 'L') ? -1 : 0;
 
         s32 num = 0;
-        while (ptr < end && *ptr >= '0' && *ptr <= '9') {
+        while (ptr < end && char_is_digit(*ptr)) {
             num = num * 10 + (*ptr++ - '0');
         }
         distances[idx] = num;
 
-        while (ptr < end && (*ptr == '\n' || *ptr == '\r')) ptr++;
+        while (ptr < end && char_is_whitespace(*ptr)) ptr++;
         idx++;
     }
 

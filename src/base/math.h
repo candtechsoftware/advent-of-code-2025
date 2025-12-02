@@ -268,3 +268,30 @@ static inline f32 Abs(f32 x) {
 #define floor_f32(v)  floorf(v)
 #define round_f32(v)  roundf(v)
 #define abs_f32(v)    fabsf(v)
+
+static inline u64 pow_u64(u64 base, u32 exp) {
+    if (base == 2) return 1ULL << exp;
+    u64 result = 1;
+    for (u32 i = 0; i < exp; i++) result *= base;
+    return result;
+}
+
+static inline u32 clz_u64(u64 n) {
+#if defined(_MSC_VER)
+    unsigned long idx;
+    _BitScanReverse64(&idx, n);
+    return 63 - idx;
+#else
+    return __builtin_clzll(n);
+#endif
+}
+
+static inline u32 digit_count_u64_impl(u64 n) {
+    if (n == 0) return 1;
+    u32 bits = 64 - clz_u64(n);
+    u32 digits = (bits * 77) >> 8;
+    if (n >= pow_u64(10, digits)) digits++;
+    return digits;
+}
+
+#define digit_count_u64(n) digit_count_u64_impl(n)

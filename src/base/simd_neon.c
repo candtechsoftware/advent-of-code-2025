@@ -44,4 +44,20 @@ simd_cmpeq_zero_mask_s32(simd_v4s32 a) {
     return mask;
 }
 
+simd_v4s32
+simd_mul_s32(simd_v4s32 a, simd_v4s32 b) {
+    return (simd_v4s32){vmulq_s32(a.v, b.v)};
+}
+
+s32
+simd_hsum_s32(simd_v4s32 a) {
+    return vaddvq_s32(a.v);
+}
+
+simd_v4s32
+simd_set_s32(s32 a, s32 b, s32 c, s32 d) {
+    s32 vals[4] = {a, b, c, d};
+    return (simd_v4s32){vld1q_s32(vals)};
+}
+
 #endif
