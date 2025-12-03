@@ -14,8 +14,6 @@ parse_number(u8 **ptr, u8 *end) {
     return n;
 }
 
-
-
 u64
 solve_range_scalar(u64 start, u64 end) {
     u64 sum = 0;
@@ -46,7 +44,6 @@ solve_range_scalar(u64 start, u64 end) {
             }
         }
     }
-
     return sum;
 }
 
@@ -142,9 +139,199 @@ solve_part1(Arena *arena, String input, b32 use_simd) {
           use_simd ? "SIMD" : "scalar", buf, (u32)elapsed_us);
 }
 
+static b32
+is_repeated_pattern(u64 n) {
+    if (n < 10) return 0;
+
+    u32 num_digits = digit_count_u64(n);
+
+    for (u32 pattern_len = 1; pattern_len <= num_digits / 2; pattern_len++) {
+        if (num_digits % pattern_len != 0) continue;
+
+        u64 divisor = pow_u64(10, pattern_len);
+        u64 pattern = n % divisor;
+        u64 temp = n;
+        b32 valid = 1;
+
+        while (temp > 0) {
+            if ((temp % divisor) != pattern) {
+                valid = 0;
+                break;
+            }
+            temp /= divisor;
+        }
+
+        if (valid) return 1;
+    }
+
+    return 0;
+}
+
+u64
+solve_range_part2_scalar_slow(u64 start, u64 end) {
+    u64 sum = 0;
+    for (u64 n = start; n <= end; n++) {
+        if (is_repeated_pattern(n)) {
+            sum += n;
+        }
+    }
+    return sum;
+}
+
+static b32
+is_itself_repeated(u64 pattern, u32 pattern_len) {
+    if (pattern_len < 2) return 0;
+    for (u32 sub_len = 1; sub_len < pattern_len; sub_len++) {
+        if (pattern_len % sub_len != 0) continue;
+        u64 divisor = pow_u64(10, sub_len);
+        u64 sub_pattern = pattern % divisor;
+        u64 temp = pattern;
+        b32 valid = 1;
+        while (temp > 0) {
+            if ((temp % divisor) != sub_pattern) { valid = 0; break; }
+            temp /= divisor;
+        }
+        if (valid) return 1;
+    }
+    return 0;
+}
+
+u64
+solve_range_part2_scalar_fast(u64 start, u64 end) {
+    u64 sum = 0;
+    u32 max_digits = digit_count_u64(end);
+
+    for (u32 total_digits = 2; total_digits <= max_digits; total_digits++) {
+        for (u32 pattern_len = 1; pattern_len <= total_digits / 2; pattern_len++) {
+            if (total_digits % pattern_len != 0) continue;
+            u32 repeats = total_digits / pattern_len;
+            if (repeats < 2) continue;
+
+            u64 base = pow_u64(10, pattern_len);
+            u64 multiplier = 0;
+            for (u32 r = 0; r < repeats; r++) {
+                multiplier += pow_u64(base, r);
+            }
+
+            u64 min_pattern = (pattern_len == 1) ? 1 : pow_u64(10, pattern_len - 1);
+            u64 max_pattern = base - 1;
+
+            for (u64 p = min_pattern; p <= max_pattern; p++) {
+                if (is_itself_repeated(p, pattern_len)) continue;
+                u64 num = p * multiplier;
+                if (num < start) continue;
+                if (num > end) break;
+                sum += num;
+            }
+        }
+    }
+    return sum;
+}
+
+u64
+solve_range_part2_simd(u64 start, u64 end) {
+    u64 sum = 0;
+    u32 max_digits = digit_count_u64(end);
+
+    for (u32 total_digits = 2;
+            total_digits <= max_digits;
+            total_digits++) {
+        for (u32 pattern_len = 1;
+                pattern_len <= total_digits / 2;
+                pattern_len++) {
+
+            if (total_digits % pattern_len != 0) continue;
+            u32 repeats = total_digits / pattern_len;
+            if (repeats < 2) continue;
+
+            u64 base = pow_u64(10, pattern_len);
+            u64 multiplier = 0;
+            for (u32 r = 0; r < repeats; r++) {
+                multiplier += pow_u64(base, r);
+            }
+
+            u64 min_pattern = (pattern_len == 1) ? 1 : pow_u64(10, pattern_len - 1);
+            u64 max_pattern = base - 1;
+
+            u64 lo = min_pattern;
+            u64 first_valid = lo * multiplier;
+            if (first_valid < start) {
+                lo = (start + multiplier - 1) / multiplier;
+                if (lo < min_pattern) lo = min_pattern;
+            }
+
+            u64 hi = max_pattern;
+            u64 last_valid = hi * multiplier;
+            if (last_valid > end) {
+                hi = end / multiplier;
+                if (hi > max_pattern) hi = max_pattern;
+            }
+            if (lo > hi) continue;
+
+            u64 p = lo;
+
+#if USE_NEON || USE_SSE4 || USE_AVX2
+            for (; p + 4 <= hi + 1; p += 4) {
+                s32 skip[4];
+                skip[0] = is_itself_repeated(p, pattern_len) ? 0 : 1;
+                skip[1] = is_itself_repeated(p+1, pattern_len) ? 0 : 1;
+                skip[2] = is_itself_repeated(p+2, pattern_len) ? 0 : 1;
+                skip[3] = is_itself_repeated(p+3, pattern_len) ? 0 : 1;
+
+                simd_v4s32 mask = simd_load4_s32(skip);
+                simd_v4s32 patterns = simd_set_s32((s32)p, (s32)(p+1), (s32)(p+2), (s32)(p+3));
+                simd_v4s32 mult_vec = simd_set1_s32((s32)multiplier);
+                simd_v4s32 nums = simd_mul_s32(patterns, mult_vec);
+                simd_v4s32 masked = simd_mul_s32(nums, mask);
+                sum += (u64)simd_hsum_s32(masked);
+            }
+#endif
+            for (; p <= hi; p++) {
+                if (is_itself_repeated(p, pattern_len)) continue;
+                sum += p * multiplier;
+            }
+        }
+    }
+    return sum;
+}
+
+// @Note(Alex): Playing around with funciton pointers 
+// spend some times looking at compiler out put and 
+// also see if there is a way to profile this as well 
+// it is one way to do dynamic dispatch but it is akin to OOP 
+// note sure I like it but it could be usefule and also could see how it compares
+// normal switch/case or even if/else. but the syntax is quite nice?
+typedef u64 (*Part2RangeFn)(u64 start, u64 end);
+
 void
-solve_part2(Arena *arena, String input) {
-    print("Part 2: {s}\n", "not implemented");
+solve_part2(Arena *arena, String input, Part2RangeFn range_fn, char *label) {
+    u64 total_sum = 0;
+
+    u8 *ptr = input.str;
+    u8 *end = input.str + input.size;
+
+    u64 start_time = os_now_microseconds();
+
+    while (ptr < end) {
+        while (ptr < end && (char_is_whitespace(*ptr) || *ptr == ',')) ptr++;
+        if (ptr >= end) break;
+
+        u64 range_start = parse_number(&ptr, end);
+        if (ptr < end && *ptr == '-') ptr++;
+        u64 range_end = parse_number(&ptr, end);
+
+        if (range_end >= range_start) {
+            total_sum += range_fn(range_start, range_end);
+        }
+    }
+
+    u64 end_time = os_now_microseconds();
+    u64 elapsed_us = end_time - start_time;
+
+    char buf[32];
+    u32 len = fmt_u64_to_str(total_sum, buf, 10);
+    buf[len] = 0;
+    print("Part 2 ({s}): {s} (time: {u} us)\n", label, buf, (u32)elapsed_us);
 }
 
 void
@@ -163,7 +350,10 @@ entry_point(Cmd_Line *cmd_line) {
     solve_part1(arena, input, 0);
     solve_part1(arena, input, 1);
     print("\n");
-    solve_part2(arena, input);
+    // @NOTE(Alex): read above note do I like this? 
+    solve_part2(arena, input, solve_range_part2_scalar_slow, "scalar_slow");
+    solve_part2(arena, input, solve_range_part2_scalar_fast, "scalar_fast");
+    solve_part2(arena, input, solve_range_part2_simd, "simd");
 
     arena_release(arena);
 }
