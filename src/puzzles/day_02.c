@@ -4,6 +4,28 @@
 #include "base/base_inc.c"
 #include "os/os_inc.c"
 
+static inline u32
+digit_count_u64(u64 n) {
+    if (n == 0) return 1;
+    u32 count = 0;
+    while (n > 0) {
+        n /= 10;
+        count++;
+    }
+    return count;
+}
+
+static inline u64
+pow_u64(u64 base, u32 exp) {
+    u64 result = 1;
+    while (exp > 0) {
+        if (exp & 1) result *= base;
+        base *= base;
+        exp >>= 1;
+    }
+    return result;
+}
+
 static inline u64
 parse_number(u8 **ptr, u8 *end) {
     u64 n = 0;
@@ -76,13 +98,13 @@ solve_range_simd(u64 start, u64 end) {
             s32 mult = (s32)(divisor + 1);
 
 #if USE_NEON || USE_SSE4 || USE_AVX2
-            simd_v4s32 multiplier = simd_set1_s32(mult);
+            Simd_V4s32 multiplier = simd_set1_s32(mult);
             u64 p = lo_prefix;
             u64 i = 0;
 
             for (; i + 4 <= count; i += 4) {
-                simd_v4s32 prefixes = simd_set_s32((s32)p, (s32)(p+1), (s32)(p+2), (s32)(p+3));
-                simd_v4s32 products = simd_mul_s32(prefixes, multiplier);
+                Simd_V4s32 prefixes = simd_set_s32((s32)p, (s32)(p+1), (s32)(p+2), (s32)(p+3));
+                Simd_V4s32 products = simd_mul_s32(prefixes, multiplier);
                 sum += (u64)simd_hsum_s32(products);
                 p += 4;
             }
@@ -278,11 +300,11 @@ solve_range_part2_simd(u64 start, u64 end) {
                 skip[2] = is_itself_repeated(p+2, pattern_len) ? 0 : 1;
                 skip[3] = is_itself_repeated(p+3, pattern_len) ? 0 : 1;
 
-                simd_v4s32 mask = simd_load4_s32(skip);
-                simd_v4s32 patterns = simd_set_s32((s32)p, (s32)(p+1), (s32)(p+2), (s32)(p+3));
-                simd_v4s32 mult_vec = simd_set1_s32((s32)multiplier);
-                simd_v4s32 nums = simd_mul_s32(patterns, mult_vec);
-                simd_v4s32 masked = simd_mul_s32(nums, mask);
+                Simd_V4s32 mask = simd_loadu_s32(skip);
+                Simd_V4s32 patterns = simd_set_s32((s32)p, (s32)(p+1), (s32)(p+2), (s32)(p+3));
+                Simd_V4s32 mult_vec = simd_set1_s32((s32)multiplier);
+                Simd_V4s32 nums = simd_mul_s32(patterns, mult_vec);
+                Simd_V4s32 masked = simd_mul_s32(nums, mask);
                 sum += (u64)simd_hsum_s32(masked);
             }
 #endif

@@ -2,14 +2,13 @@
 #include "base.h"
 
 typedef union Vec2_f32 {
-    struct
-    {
+    struct {
         f32 x, y;
     };
-    struct
-    {
-        f32 u, v;
+    struct {
+        f32 width, height;
     };
+    f32 v[2];
 } Vec2_f32;
 
 typedef union Vec2_f64 {
@@ -38,14 +37,16 @@ typedef struct Vec2_s64 {
 
 typedef union Vec3_f32 {
     struct {
-        f32 x;
-        f32 y;
-        f32 z;
+        f32 x, y, z;
+    };
+    struct {
+        f32 r, g, b;
     };
     struct {
         Vec2_f32 xy;
         f32      z0;
     };
+    f32 v[3];
 } Vec3_f32;
 
 typedef union Vec4_f32 {
@@ -269,29 +270,54 @@ static inline f32 Abs(f32 x) {
 #define round_f32(v)  roundf(v)
 #define abs_f32(v)    fabsf(v)
 
-static inline u64 pow_u64(u64 base, u32 exp) {
-    if (base == 2) return 1ULL << exp;
-    u64 result = 1;
-    for (u32 i = 0; i < exp; i++) result *= base;
-    return result;
-}
-
-static inline u32 clz_u64(u64 n) {
-#if defined(_MSC_VER)
+// Integer log2 - returns floor(log2(x)) for x > 0
+static inline u32 log2_u32(u32 x) {
+#if COMPILER_CLANG || COMPILER_GCC
+    return x ? 31 - __builtin_clz(x) : 0;
+#elif COMPILER_MSVC
     unsigned long idx;
-    _BitScanReverse64(&idx, n);
-    return 63 - idx;
+    return _BitScanReverse(&idx, x) ? idx : 0;
 #else
-    return __builtin_clzll(n);
+    u32 result = 0;
+    while (x > 1) { x >>= 1; result++; }
+    return result;
 #endif
 }
 
-static inline u32 digit_count_u64_impl(u64 n) {
-    if (n == 0) return 1;
-    u32 bits = 64 - clz_u64(n);
-    u32 digits = (bits * 77) >> 8;
-    if (n >= pow_u64(10, digits)) digits++;
-    return digits;
+static inline u64 log2_u64(u64 x) {
+#if COMPILER_CLANG || COMPILER_GCC
+    return x ? 63 - __builtin_clzll(x) : 0;
+#elif COMPILER_MSVC
+    unsigned long idx;
+    return _BitScanReverse64(&idx, x) ? idx : 0;
+#else
+    u64 result = 0;
+    while (x > 1) { x >>= 1; result++; }
+    return result;
+#endif
 }
 
-#define digit_count_u64(n) digit_count_u64_impl(n)
+// Knuth multiplicative hash - optimal for single integer values
+// 2^32 * (sqrt(5) - 1) / 2  (golden ratio)
+#define KNUTH_GOLDEN_RATIO_32 2654435769U
+// 2^64 / phi
+#define KNUTH_GOLDEN_RATIO_64 11400714819323198485ULL
+
+static inline u32 hash_u32(u32 x) {
+    return x * KNUTH_GOLDEN_RATIO_32;
+}
+
+static inline u64 hash_u64(u64 x) {
+    return x * KNUTH_GOLDEN_RATIO_64;
+}
+
+// Hash u32 to bucket index for power-of-2 bucket counts
+// Uses high bits which have better distribution after Knuth multiply
+static inline u32 hash_to_index(u32 x, u32 bucket_count_log2) {
+    return (x * KNUTH_GOLDEN_RATIO_32) >> (32 - bucket_count_log2);
+}
+
+// Hash u32 to bucket index for non-power-of-2 bucket counts (slower)
+static inline u32 hash_to_index_mod(u32 x, u32 bucket_count) {
+    return (x * KNUTH_GOLDEN_RATIO_32) % bucket_count;
+}

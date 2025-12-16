@@ -100,17 +100,21 @@ static String      str_list_join(Arena *arena, String_List *list, String_Join *o
 static String_List str_split(Arena *arena, String string, u8 *split_char, u32 count);
 
 static String str_pushfv(Arena *arena, char *fmt, va_list args);
-String        str_pushf(Arena *arena, char *fmt, ...);
-void          str_list_pushf(Arena *arena, String_List *list, char *fmt, ...);
-String        str_push_copy(Arena *arena, String string);
+static String str_pushf(Arena *arena, char *fmt, ...);
+static void   str_list_pushf(Arena *arena, String_List *list, char *fmt, ...);
+static String str_push_copy(Arena *arena, String string);
 
-u64 str_find_needle(String string, u64 start_pos, String needle, String_Match_Flags flags);
+static u64 str_find_needle(String string, u64 start_pos, String needle, String_Match_Flags flags);
 
-String str_prefix(String str, u64 size);
-String str_chop(String str, u64 amount);
-String str_postfix(String str, u64 size);
-String str_skip(String str, u64 amount);
-String str_skip_chop_whitespace(String str);
+static inline b32    str_ends_with(String s, String suffix);
+static inline b32    str_starts_with(String s, String prefix);
+static inline String str_substr(String s, u64 start_pos, u64 len);
+
+static String str_prefix(String str, u64 size);
+static String str_chop(String str, u64 amount);
+static String str_postfix(String str, u64 size);
+static String str_skip(String str, u64 amount);
+static String str_skip_chop_whitespace(String str);
 
 static u64 str_hash(String str);
 static b32 str_match(String a, String b, String_Match_Flags flags);

@@ -11,7 +11,8 @@ enum {
     Run_Simd        = (1<<2),
     Run_Scalar      = Run_Scalar_Slow | Run_Scalar_Fast,
 }; 
-u64
+
+static u64
 solve_scalar(s32 *directions, s32 *distances, u64 count) {
     s32 pos = 50;
     u64 zero_count = 0;
@@ -26,7 +27,7 @@ solve_scalar(s32 *directions, s32 *distances, u64 count) {
     return zero_count;
 }
 
-u64
+static u64
 solve_simd(s32 *directions, s32 *distances, u64 count) {
     s32 pos = 50;
     u64 zero_count = 0;
@@ -34,14 +35,14 @@ solve_simd(s32 *directions, s32 *distances, u64 count) {
     u64 i = 0;
 #if USE_NEON || USE_SSE4 || USE_AVX2
     for (; i + 4 <= count; i += 4) {
-        simd_v4s32 dir_vec = simd_load4_s32(&directions[i]);
-        simd_v4s32 dist_vec = simd_load4_s32(&distances[i]);
+        Simd_V4s32 dir_vec = simd_loadu_s32(&directions[i]);
+        Simd_V4s32 dist_vec = simd_loadu_s32(&distances[i]);
 
-        simd_v4s32 neg_dist = simd_neg_s32(dist_vec);
-        simd_v4s32 delta = simd_blend_s32(dist_vec, neg_dist, dir_vec);
+        Simd_V4s32 neg_dist = simd_neg_s32(dist_vec);
+        Simd_V4s32 delta = simd_blend_s32(dist_vec, neg_dist, dir_vec);
 
         s32 deltas[4];
-        simd_store4_s32(deltas, delta);
+        simd_storeu_s32(deltas, delta);
 
         for (int j = 0; j < 4; j++) {
             pos = (pos + deltas[j]) % 100;
@@ -61,7 +62,7 @@ solve_simd(s32 *directions, s32 *distances, u64 count) {
     return zero_count;
 }
 
-void
+static void
 solve_part1(Arena *arena, String input, b32 use_simd) {
     u64 line_count = 0;
     for (u64 i = 0; i < input.size; i++) {
@@ -107,7 +108,7 @@ solve_part1(Arena *arena, String input, b32 use_simd) {
           (u32)elapsed_us);
 }
 
-u64
+static u64
 solve_scalar_part2_slow(s32 *directions, s32 *distances, u64 count) {
     s32 pos = 50;
     u64 zero_count = 0;
@@ -132,7 +133,7 @@ solve_scalar_part2_slow(s32 *directions, s32 *distances, u64 count) {
     return zero_count;
 }
 
-u64
+static u64
 solve_scalar_part2(s32 *directions, s32 *distances, u64 count) {
     s32 pos = 50;
     u64 zero_count = 0;
@@ -164,7 +165,7 @@ solve_scalar_part2(s32 *directions, s32 *distances, u64 count) {
     return zero_count;
 }
 
-u64
+static u64
 solve_simd_part2(s32 *directions, s32 *distances, u64 count) {
     s32 pos = 50;
     u64 zero_count = 0;
@@ -196,7 +197,7 @@ solve_simd_part2(s32 *directions, s32 *distances, u64 count) {
     return zero_count;
 }
 
-void
+static void
 solve_part2(Arena *arena, String input, Run_Flag flag) {
     u64 line_count = 0;
     for (u64 i = 0; i < input.size; i++) {

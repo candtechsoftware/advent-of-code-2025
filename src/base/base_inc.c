@@ -13,4 +13,6 @@
 #include "simd_neon.c"
 #elif USE_AVX2 || USE_SSE4
 #include "simd_x86.c"
+#else
+#include "simd_scalar.c"
 #endif

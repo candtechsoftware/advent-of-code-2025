@@ -1,3 +1,4 @@
+// @TODO(Alex): maybe do this a better way?
 static b32 
 memory_match(void *a, void *b, u64 size) {
     u8 *a_ptr = (u8 *)a;

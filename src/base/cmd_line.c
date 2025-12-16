@@ -57,12 +57,12 @@ cmd_line_from_string_list(Arena *arena, String_List command_line) {
     parsed.exe_name = command_line.first->string;
     parsed.option_table_size = 64;
     parsed.option_table = push_array(arena, Cmd_Line_Opt *, parsed.option_table_size);
-
+	
     b32 after_passthrough_option = 0;
     b32 first_passthrough = 1;
     for (String_Node *node = command_line.first->next, *next = 0; node != 0; node = next) {
         next = node->next;
-
+		
         b32    is_option = 0;
         String option_name = node->string;
         if (!after_passthrough_option) {
@@ -81,7 +81,7 @@ cmd_line_from_string_list(Arena *arena, String_List command_line) {
                 is_option = 0;
             }
         }
-
+		
         if (is_option) {
             b32    has_values = 0;
             u64    value_signifier_position1 = str_find_needle(option_name, 0, str_lit(":"), 0);
@@ -92,7 +92,7 @@ cmd_line_from_string_list(Arena *arena, String_List command_line) {
                 has_values = 1;
             }
             option_name = str_prefix(option_name, value_signifier_position);
-
+			
             String_List values = {0};
             if (has_values) {
                 for (String_Node *n = node; n; n = n->next) {
@@ -112,16 +112,16 @@ cmd_line_from_string_list(Arena *arena, String_List command_line) {
                     }
                 }
             }
-
+			
             cmd_line_insert_opt(arena, &parsed, option_name, values);
         }
-
+		
         else if (!str_match(node->string, str_lit("--"), 0) || !first_passthrough) {
             str_list_push(arena, &parsed.inputs, node->string);
             first_passthrough = 0;
         }
     }
-
+	
     parsed.argc = command_line.count;
     parsed.argv = push_array(arena, char *, parsed.argc);
     {
@@ -131,7 +131,7 @@ cmd_line_from_string_list(Arena *arena, String_List command_line) {
             idx += 1;
         }
     }
-
+	
     return parsed;
 }
 
@@ -153,8 +153,8 @@ cmd_line_strings(Cmd_Line *cmd_line, String name) {
 static String
 cmd_line_string(Cmd_Line *cmd_line, String name) {
     String result = {0};
-
-    Cmd_Line_Opt *var = cmd_line_opt_from_string(cmd_line, name);
+	
+	Cmd_Line_Opt *var = cmd_line_opt_from_string(cmd_line, name);
     if (var != 0) {
         result = var->value_string;
     }

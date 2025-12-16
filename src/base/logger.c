@@ -123,7 +123,7 @@ log_init(Arena *arena, String log_file_path) {
 
     g_logger_state->arena = arena;
     g_logger_state->initialized = 1;
-    g_logger_state->flags = Log_Flag_Buffered;
+    g_logger_state->flags = 0;
 
     g_logger_state->buffer_cap = LOG_BUFFER_SIZE;
     g_logger_state->buffer = push_array(arena, u8, LOG_BUFFER_SIZE);
@@ -270,12 +270,13 @@ log_impl(Log_Level level, String file, u32 line, char *fmt, ...) {
         }
     }
 
-    if (g_logger_state->flags & Log_Flag_Buffered) {
-        log_buffer_write(log_msg.str, log_msg.size);
-        if (g_logger_state->flags & Log_Flag_FlushNow) log_flush_buffer();
-    } else {
-        log_write_raw(log_msg.str, log_msg.size);
-    }
+#if DEBUG_MODE
+    // Debug: write immediately so you always see output
+    log_write_raw(log_msg.str, log_msg.size);
+#else
+    // Release: buffer for performance, flush when full
+    log_buffer_write(log_msg.str, log_msg.size);
+#endif
 
     arena_end_scratch(&temp);
 }
@@ -291,11 +292,11 @@ log_print(const char *fmt, ...) {
     String msg = str_fmtv(temp.arena, fmt, args);
     va_end(args);
 
-    if (g_logger_state->flags & Log_Flag_Buffered) {
-        log_buffer_write(msg.str, msg.size);
-    } else {
-        log_write_raw(msg.str, msg.size);
-    }
+#if DEBUG_MODE
+    log_write_raw(msg.str, msg.size);
+#else
+    log_buffer_write(msg.str, msg.size);
+#endif
 
     arena_end_scratch(&temp);
 }

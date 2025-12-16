@@ -1,5 +1,4 @@
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 static inline b32 char_is_whitespace(u8 c) {
@@ -13,6 +12,14 @@ static inline b32 char_is_slash(u8 c) {
 
 static inline b32 char_is_digit(u8 c) {
     return ('0' <= c && c <= '9');
+}
+
+static inline b32 char_is_alpha(u8 c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+static inline b32 char_is_hex_digit(u8 c) {
+    return char_is_digit(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F');
 }
 
 static inline u8 char_to_upper(u8 c) {
@@ -180,27 +187,28 @@ str_split(Arena *arena, String string, u8 *split_char, u32 count) {
 }
 
 
-static String 
+static String
 str_pushfv(Arena *arena, char *fmt, va_list args) {
     va_list args_copy;
     va_copy(args_copy, args);
-	
-    int needed = vsnprintf(0, 0, fmt, args_copy);
+
+    int needed = str_vsnprintf(0, 0, fmt, args_copy);
     va_end(args_copy);
-	
+
     if (needed < 0) {
         String result = {0};
         return result;
     }
-	
+
     u8 *str = push_array(arena, u8, needed + 1);
-    vsnprintf((char *)str, needed + 1, fmt, args);
-	
+    str_vsnprintf((char *)str, needed + 1, fmt, args);
+
     String result = {str, (u64)needed};
     return result;
 }
 
-String str_pushf(Arena *arena, char *fmt, ...) {
+static String 
+str_pushf(Arena *arena, char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     String result = str_pushfv(arena, fmt, args);
@@ -208,7 +216,8 @@ String str_pushf(Arena *arena, char *fmt, ...) {
     return result;
 }
 
-void str_list_pushf(Arena *arena, String_List *list, char *fmt, ...) {
+static void 
+str_list_pushf(Arena *arena, String_List *list, char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     String string = str_pushfv(arena, fmt, args);
@@ -216,7 +225,8 @@ void str_list_pushf(Arena *arena, String_List *list, char *fmt, ...) {
     str_list_push(arena, list, string);
 }
 
-String str_push_copy(Arena *arena, String string) {
+static String 
+str_push_copy(Arena *arena, String string) {
     u8 *str = push_array(arena, u8, string.size + 1);
     MemoryCopy(str, string.str, string.size);
     str[string.size] = 0;
@@ -224,7 +234,33 @@ String str_push_copy(Arena *arena, String string) {
     return result;
 }
 
-String str_prefix(String str, u64 size) {
+static inline b32 
+str_ends_with(String s, String suffix) {
+	if (suffix.size > s.size) {
+		return 0; 
+	} 
+	u64 offset = s.size - suffix.size; 
+	return MemoryMatchStruct(s.str + offset, suffix.str) == 0; 
+} 
+static inline b32 
+str_starts_with(String s, String prefix) {
+	if (prefix.size > s.size) {
+		return 0; 
+	} 
+	return MemoryMatchStruct(s.str, prefix.str); 
+} 
+static String
+str_substr(String s, u64 start_pos, u64 len) {
+	if (start_pos > s.size) start_pos = s.size;
+	if (start_pos + len > s.size) len = s.size - start_pos;
+	return (String){
+		.str = s.str + start_pos,
+		.size = len,
+	};
+} 
+
+static String 
+str_prefix(String str, u64 size) {
     if (size > str.size) {
         size = str.size;
     }
@@ -232,7 +268,8 @@ String str_prefix(String str, u64 size) {
     return result;
 }
 
-String str_chop(String str, u64 amount) {
+static String 
+str_chop(String str, u64 amount) {
     if (amount > str.size) {
         amount = str.size;
     }
@@ -240,7 +277,8 @@ String str_chop(String str, u64 amount) {
     return result;
 }
 
-String str_postfix(String str, u64 size) {
+static String 
+str_postfix(String str, u64 size) {
     if (size > str.size) {
         size = str.size;
     }
@@ -249,7 +287,8 @@ String str_postfix(String str, u64 size) {
     return result;
 }
 
-String str_skip(String str, u64 amount) {
+static String 
+str_skip(String str, u64 amount) {
     if (amount > str.size) {
         amount = str.size;
     }
@@ -257,7 +296,8 @@ String str_skip(String str, u64 amount) {
     return result;
 }
 
-String str_skip_chop_whitespace(String str) {
+static String 
+str_skip_chop_whitespace(String str) {
     String result = {0};
     if (str.size > 0) {
         u8 *sptr = str.str;
@@ -665,7 +705,8 @@ u64_hash_from_str(String string) {
     return res;
 }
 
-u64 str_find_needle(String string, u64 start_pos, String needle, String_Match_Flags flags) {
+static u64
+str_find_needle(String string, u64 start_pos, String needle, String_Match_Flags flags) {
     u8 *p = string.str + start_pos;
     u64 stop_offset = Max(string.size + 1, needle.size) - needle.size;
     u8 *stop_p = string.str + stop_offset;
@@ -695,3 +736,18 @@ u64 str_find_needle(String string, u64 start_pos, String needle, String_Match_Fl
     }
     return result;
 }
+
+
+static inline 
+String str_concat(Arena *arena, String a, String b) {
+	u64 new_size = a.size + b.size; 
+	u8* dst = push_array(arena, u8, new_size);  
+	
+	MemoryCopy(dst,          a.str, a.size); 
+	MemoryCopy(dst + a.size, b.str, b.size); 
+	
+	return (String){
+		.str = dst, 
+		.size = new_size
+	}; 
+} 

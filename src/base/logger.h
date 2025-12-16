@@ -15,10 +15,8 @@ typedef enum {
 
 typedef u32 Log_Flags;
 enum {
-    Log_Flag_Buffered = (1 << 0),    // Buffer messages instead of immediate write (default ON)
-    Log_Flag_FlushNow = (1 << 1),    // Force flush after this message
-    Log_Flag_NoTimestamp = (1 << 2), // Skip timestamp for speed
-    Log_Flag_NoLocation = (1 << 3),  // Skip file:line for speed
+    Log_Flag_NoTimestamp = (1 << 0), // Skip timestamp for speed
+    Log_Flag_NoLocation = (1 << 1),  // Skip file:line for speed
 };
 
 #define LOG_BUFFER_SIZE KB(64)
