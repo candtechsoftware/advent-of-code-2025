@@ -16,3 +16,5 @@
 #else
 #include "simd_scalar.c"
 #endif
+
+#include "sort.c"
